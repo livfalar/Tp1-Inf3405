@@ -35,9 +35,15 @@ public class Client {
 				out.writeUTF(userInput);
 				exit = true;
 				break;
-			case "downlaod":
+			case "download":
 				out.writeUTF(userInput);
 				receiveFile(expressions[1]);
+				System.out.println(in.readUTF());
+				break;
+			case "upload":
+				out.writeUTF(userInput);
+				sendFile(expressions[1]);
+				System.out.println(in.readUTF());
 				break;
 			default:
 				out.writeUTF(userInput);
@@ -53,6 +59,7 @@ public class Client {
 	private static void sendFile(String path) throws Exception{
         int bytes = 0;
         File file = new File(path);
+        //file.exist();
         FileInputStream fileInputStream = new FileInputStream(file);
         
         // send file size

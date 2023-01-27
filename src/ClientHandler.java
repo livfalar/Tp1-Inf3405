@@ -21,6 +21,7 @@ public class ClientHandler extends Thread{
 			out.writeUTF("Hello from server - you are client#" + clientNumber);// envoi de message
 			boolean exit = false;
 			in = new DataInputStream(socket.getInputStream());
+			String currentPath = "";
 			while(!exit) {
 				String userInput = in.readUTF();
 				String[] expressions = userInput.split(" ");
@@ -33,8 +34,35 @@ public class ClientHandler extends Thread{
 					out.writeUTF("hello from server");
 					break;
 				case "download":
-					try {sendFile(expressions[1]);}
+					try {
+						sendFile(expressions[1]);
+						out.writeUTF("Downloaded " + expressions[1]);
+						}
 					catch(Exception e) {}
+					break;
+				case "upload":
+					try {
+						receiveFile(expressions[1]);
+						out.writeUTF("Uploaded " + expressions[1]);
+					}
+					catch(Exception e) {}
+					break;
+				case "mkdir":
+					if(currentPath == "") {
+						createDir(expressions[1]);
+					}
+					else {
+						createDir(currentPath+"/"+expressions[1]);
+					}
+					out.writeUTF("Created directory " + expressions[1]);
+					break;
+				case "cd":
+					try{currentPath = moveInto(currentPath, expressions[1]);}
+					catch(Exception e) {}
+					break;
+				case "ls":
+					try {listFolderContent(currentPath);}
+					catch(Exception e) {};
 					break;
 				default:
 					out.writeUTF("Enter an appropriate input");
@@ -54,6 +82,7 @@ public class ClientHandler extends Thread{
 			System.out.println("Connection with client# " + clientNumber+ " closed");
 		}
 	}
+	
 	private static void sendFile(String path) throws Exception{
         int bytes = 0;
         File file = new File(path);
@@ -69,6 +98,7 @@ public class ClientHandler extends Thread{
         }
         fileInputStream.close();
     }
+	
 	private static void receiveFile(String fileName) throws Exception{
         int bytes = 0;
         FileOutputStream fileOutputStream = new FileOutputStream(fileName);
@@ -81,4 +111,44 @@ public class ClientHandler extends Thread{
         }
         fileOutputStream.close();
     }
+	
+	private static void createDir(String folderName){
+		File folder = new File(folderName);
+		folder.mkdir();
+	}
+	
+	private static String moveInto(String oldPath, String dir) throws Exception{
+		String newPath = "";
+		if (dir.contains("..")) {
+			System.out.println(dir);
+			String[] expressions = oldPath.split("/");
+			for(int i = 0; i < expressions.length - 1; i++) {
+				newPath += expressions[i];
+				if(i < expressions.length - 2) {newPath += "/";}
+			}
+			out.writeUTF("You are in " + newPath);
+			return newPath;
+		}
+		if(oldPath == "") {newPath =  dir;}
+		else{newPath = oldPath + "/" + dir;}
+		File folder = new File(newPath);
+		
+		if(folder.exists()){
+			out.writeUTF("You are in " + newPath);
+			return newPath;
+		}
+
+		out.writeUTF("Folder not found");
+		return oldPath;
+	}
+	
+	private static void listFolderContent(String currentPath) throws Exception{
+		File dir = new File(currentPath);
+		String[] listOfFiles = dir.list();
+		String message = "The files in " + currentPath + " are: \n";
+		for(int i = 0; i< listOfFiles.length; i++) {
+			message += listOfFiles[i] + "\n";
+		}
+		out.writeUTF(message);
+	}
 }
