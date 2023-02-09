@@ -35,14 +35,24 @@ public class ClientHandler extends Thread{
 					break;
 				case "download":
 					try {
-						sendFile(expressions[1]);
+						if(currentPath == "") {
+							sendFile(expressions[1]);
+						}
+						else {
+							sendFile(currentPath+"/"+expressions[1]);
+						}
 						out.writeUTF("Downloaded " + expressions[1]);
 						}
 					catch(Exception e) {}
 					break;
 				case "upload":
 					try {
-						receiveFile(expressions[1]);
+						if(currentPath == "") {
+							receiveFile(expressions[1]);
+						}
+						else {
+							receiveFile(currentPath+"/"+expressions[1]);
+						}
 						out.writeUTF("Uploaded " + expressions[1]);
 					}
 					catch(Exception e) {}
