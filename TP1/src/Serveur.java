@@ -1,34 +1,58 @@
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.Scanner;
 public class Serveur {
-	private static ServerSocket Listener; // Application Serveur
+	private static ServerSocket Listener; 
+	private static Scanner scanner = new Scanner(System.in);
 	public static void main(String[] args) throws Exception {
-		// Compteur incrémenté à chaque connexion d'un client au serveur
 		int clientNumber = 0;
-		// Adresse et port du serveur
-		String serverAddress = "127.0.0.1"; 
-		int serverPort = 5000;
-		//Création de la connexien pour communiquer ave les, clients
+		String serverAddress = ""; //"127.0.0.1"; 
+		int serverPort = 0;
+		
+		while(!isValidPort(serverPort)) {
+			System.out.println("Veuillez entrer un port: ");
+			String portInput = scanner.nextLine();
+			try {
+				serverPort = Integer.parseInt(portInput);
+				if(!isValidPort(serverPort)) {
+					System.out.println("Le port doit être entre 5000 et 5050");
+				}
+			}
+			catch(Exception e) {
+				System.out.print("Le port entré n'est pas un nombre");
+			}
+		}
+			
+		while(!isValidAddress(serverAddress)) {
+			System.out.println("Veuillez entrer une adresse: ");
+			serverAddress = scanner.nextLine();
+			if(!isValidAddress(serverAddress)) {
+				System.out.println("L'adresse doit être du format: a.b.c.d");
+			}
+		}
 		Listener = new ServerSocket();
 		Listener.setReuseAddress(true);
 		InetAddress serverIP = InetAddress.getByName(serverAddress);
-		// Association de l'adresse et du port à la connexien
 		Listener.bind(new InetSocketAddress(serverIP, serverPort));
 		System.out.format("The server is running on %s:%d%n", serverAddress, serverPort);
 		try {
-			// À chaque fois qu'un nouveau client se, connecte, on exécute la fonstion
-			// run() de l'objet ClientHandler
 			while (true) {
-				// Important : la fonction accept() est bloquante: attend qu'un prochain client se connecte
-				// Une nouvetle connection : on incémente le compteur clientNumber 
 				new ClientHandler(Listener.accept(), clientNumber++).start();
 			}
 			
 		}finally {
-			// Fermeture de la connexion
 			Listener.close();
 		}
 		
+	}
+	
+	private static boolean isValidPort(int port) {
+		return port >= 5000 && port <= 5050;
+	}
+	
+	private static boolean isValidAddress(String address) {
+		String[] elements = address.split("\\.");
+		return elements.length == 4;
 	}
 }

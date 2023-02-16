@@ -5,6 +5,8 @@ import java.io.FileOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.time.format.DateTimeFormatter;  
+import java.time.LocalDateTime;   
 public class ClientHandler extends Thread{
 	private Socket socket; 
 	private int clientNumber;
@@ -15,21 +17,33 @@ public class ClientHandler extends Thread{
 		this.clientNumber = clientNumber; 
 		System.out.println("New connection with client#" + clientNumber + " at" + socket);
 	}
-	public void run(){ // Création de thread qui envoi un message à un client
+	public void run(){ 
 		try {
-			//DataInputStream in = null;
-			//DataOutputStream out = null;
-			out = new DataOutputStream(socket.getOutputStream()); // création de canal d’envoi 
-			out.writeUTF("Hello from server - you are client#" + clientNumber);// envoi de message
+			out = new DataOutputStream(socket.getOutputStream()); 
+			out.writeUTF("Hello from server - you are client#" + clientNumber);
 			boolean exit = false;
 			in = new DataInputStream(socket.getInputStream());
 			String currentPath = ".";
 			while(!exit) {
 				String userInput = in.readUTF();
+				
+				String localAddress = this.socket.getLocalAddress().toString();
+				StringBuilder sb1 = new StringBuilder(localAddress);
+				sb1.deleteCharAt(0);
+				DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd@HH:mm:ss");  
+				LocalDateTime now = LocalDateTime.now();
+				System.out.println("[" + 
+					sb1.toString() + ":" + 
+					this.socket.getPort() + " - " + 
+					dtf.format(now) + "] : " + 
+					userInput);	
+ 
+				
 				String[] expressions = userInput.split(" ");
 				switch(expressions[0]) {
 				case "exit":
 					exit = true;
+					out.writeUTF("Vous avez été déconnecté avec succès.");
 					break;
 				case "hello":
 					System.out.println("hello from client");
@@ -43,10 +57,10 @@ public class ClientHandler extends Thread{
 						else {
 							sendFile(currentPath+"/"+expressions[1], out);
 						}
-						out.writeUTF("Downloaded " + expressions[1]);
+						out.writeUTF("Le fichier " + expressions[1] + " a bien été téléchargé.");
 						}
 					catch(Exception e) {
-						out.writeUTF("ERROR download");
+						out.writeUTF("ERROR téléchargement");
 					}
 					break;
 				case "upload":
@@ -57,10 +71,10 @@ public class ClientHandler extends Thread{
 						else {
 							receiveFile(currentPath+"/"+expressions[1], in);
 						}
-						out.writeUTF("Uploaded " + expressions[1]);
+						out.writeUTF("Le fichier " + expressions[1] + " a bien été téléversé.");
 					}
 					catch(Exception e) {
-						out.writeUTF("ERROR upload");
+						out.writeUTF("ERROR téléversement");
 					}
 					break;
 				case "mkdir":
@@ -70,7 +84,7 @@ public class ClientHandler extends Thread{
 					else {
 						createDir(currentPath+"/"+expressions[1]);
 					}
-					out.writeUTF("Created directory " + expressions[1]);
+					out.writeUTF("Le dossier " + expressions[1] + " a été créé.");
 					break;
 				case "cd":
 					try{
@@ -110,9 +124,7 @@ public class ClientHandler extends Thread{
         File file = new File(path);
         FileInputStream fileInputStream = new FileInputStream(file);
         
-        // send file size
         out.writeLong(file.length());  
-        // break file into chunks
         byte[] buffer = new byte[4*1024];
         while ((bytes=fileInputStream.read(buffer))!=-1){
             out.write(buffer,0,bytes);
@@ -125,11 +137,11 @@ public class ClientHandler extends Thread{
         int bytes = 0;
         FileOutputStream fileOutputStream = new FileOutputStream(fileName);
         
-        long size = in.readLong();     // read file size
+        long size = in.readLong();    
         byte[] buffer = new byte[4*1024];
         while (size > 0 && (bytes = in.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
             fileOutputStream.write(buffer,0,bytes);
-            size -= bytes;      // read upto file size
+            size -= bytes;     
         }
         fileOutputStream.close();
     }
@@ -150,27 +162,33 @@ public class ClientHandler extends Thread{
 					if(i < expressions.length - 2) {newPath += "/";}
 				}
 			}
-			out.writeUTF("You are in " + newPath);
+			out.writeUTF("Vous êtes dans le dossier " + newPath);
 			return newPath;
 		}
 		newPath = oldPath + "/" + dir;
 		File folder = new File(newPath);
 		
 		if(folder.exists()){
-			out.writeUTF("You are in " + newPath);
+			out.writeUTF("Vous êtes dans le dossier " + newPath);
 			return newPath;
 		}
 
-		out.writeUTF("Folder not found");
+		out.writeUTF("Dossier non créé");
 		return oldPath;
 	}
 	
 	private static void listFolderContent(String currentPath, DataOutputStream out) throws Exception{
 		File dir = new File(currentPath);
 		String[] listOfFiles = dir.list();
-		String message = "The files in " + currentPath + " are: ";
+		String message = "";
 		for(int i = 0; i< listOfFiles.length; i++) {
-			message += "\n" + listOfFiles[i];
+			if(listOfFiles[i].contains(".")) {
+				message += "[File] ";
+			}
+			else {
+				message += "[Folder] ";
+			}
+			message += listOfFiles[i] + "\n";
 		}
 		out.writeUTF(message);
 	}

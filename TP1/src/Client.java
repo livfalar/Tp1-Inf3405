@@ -12,20 +12,37 @@ public class Client {
 	private static DataInputStream in = null;
 	private static DataOutputStream out = null;
 	public static void main(String[] args) throws Exception {
-		// Adresse et port du serveur
-		String serverAddress = "127.0.0.1";
-		int port = 5000;
-		// Création d'une nouvelle connexion aves le serveur
+		int port = 0;
+		while(!isValidPort(port)) {
+			System.out.println("Veuillez entrer un port: ");
+			String portInput = scanner.nextLine();
+			try {
+				port = Integer.parseInt(portInput);
+				if(!isValidPort(port)) {
+					System.out.println("Le port doit être entre 5000 et 5050");
+				}
+			}
+			catch(Exception e) {
+				System.out.print("Le port entré n'est pas un nombre");
+			}
+		}
+		
+		String serverAddress = "";
+		
+		while(!isValidAddress(serverAddress)) {
+			System.out.println("Veuillez entrer une adresse: ");
+			serverAddress = scanner.nextLine();
+			if(!isValidAddress(serverAddress)) {
+				System.out.println("L'adresse doit être du format: a.b.c.d");
+			}
+		}
+		
 		socket = new Socket(serverAddress, port);
 		System.out.format("Serveur lancé sur [%s:%d]", serverAddress, port);
-		// Céatien d'un canal entrant pour recevoir les messages envoyés, par le serveur
 		in = new DataInputStream(socket.getInputStream());
-		// Attente de la réception d'un message envoyé par le, server sur le canal
 		String helloMessageFromServer = in.readUTF();
-		System.out.println(helloMessageFromServer);
-		// fermeture de La connexion avec le serveur
+		System.out.println(helloMessageFromServer);		
 		out = new DataOutputStream(socket.getOutputStream());
-		//Scanner scanner = new Scanner(System.in);
 		boolean exit = false;
 		while(!exit) {
 			String userInput = scanner.nextLine();
@@ -33,6 +50,7 @@ public class Client {
 			switch (expressions[0]) {
 			case "exit":
 				out.writeUTF(userInput);
+				System.out.println(in.readUTF());
 				exit = true;
 				break;
 			case "download":
@@ -59,12 +77,9 @@ public class Client {
 	private static void sendFile(String path) throws Exception{
         int bytes = 0;
         File file = new File(path);
-        //file.exist();
         FileInputStream fileInputStream = new FileInputStream(file);
         
-        // send file size
         out.writeLong(file.length());  
-        // break file into chunks
         byte[] buffer = new byte[4*1024];
         while ((bytes=fileInputStream.read(buffer))!=-1){
             out.write(buffer,0,bytes);
@@ -76,12 +91,21 @@ public class Client {
         int bytes = 0;
         FileOutputStream fileOutputStream = new FileOutputStream(fileName);
         
-        long size = in.readLong();     // read file size
+        long size = in.readLong();     
         byte[] buffer = new byte[4*1024];
         while (size > 0 && (bytes = in.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
             fileOutputStream.write(buffer,0,bytes);
-            size -= bytes;      // read upto file size
+            size -= bytes;      
         }
         fileOutputStream.close();
     }
+	
+	private static boolean isValidPort(int port) {
+		return port >= 5000 && port <= 5050;
+	}
+	
+	private static boolean isValidAddress(String address) {
+		String[] elements = address.split("\\.");
+		return elements.length == 4;
+	}
 }
